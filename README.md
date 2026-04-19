@@ -68,7 +68,7 @@ Pay per successful request. `1 credit = $1 USD`. Your $10 signup bonus already c
 | `nunchaku-wan2.2-lightning-t2v` | `normal` | $0.020 | ~500 videos |
 | `nunchaku-wan2.2-lightning-i2v` | `normal` | $0.025 | ~400 videos |
 
-> **Tip:** iterate on prompts with `radically_fast` (Qwen only, ~10× faster, ~60% cheaper) then switch to `fast` for your final demo images. Full tier comparison is under **Speed Tiers** below.
+> **Tip:** default to `radically_fast` for Qwen (~10× faster, ~60% cheaper). Only switch to `fast` if you find the extra steps are genuinely needed for your final demo. Full tier comparison is under **Speed Tiers** below.
 
 ---
 
@@ -101,8 +101,7 @@ curl -X POST https://api.nunchaku.dev/v1/images/generations \
     "prompt": "a red apple on a wooden table, photorealistic",
     "n": 1,
     "size": "1024x1024",
-    "tier": "fast",
-    "num_inference_steps": 28,
+    "tier": "radically_fast",
     "response_format": "b64_json",
     "seed": 42
   }' | jq -r '.data[0].b64_json' | base64 -d > output.jpg
@@ -120,8 +119,7 @@ response = requests.post(
         "prompt": "a red apple on a wooden table, photorealistic",
         "n": 1,
         "size": "1024x1024",
-        "tier": "fast",
-        "num_inference_steps": 28,
+        "tier": "radically_fast",
         "response_format": "b64_json",
         "seed": 42,
     },
@@ -142,7 +140,7 @@ response = client.images.generate(
     n=1,
     size="1024x1024",
     response_format="b64_json",
-    extra_body={"tier": "fast", "num_inference_steps": 28, "seed": 42},
+    extra_body={"tier": "radically_fast", "seed": 42},
 )
 img = base64.b64decode(response.data[0].b64_json)
 ```
@@ -157,7 +155,7 @@ img = base64.b64decode(response.data[0].b64_json)
 | `prompt` | string | required | What to generate |
 | `n` | int | 1 | Number of images (1-10) |
 | `size` | string | `1024x1024` | `WxH` format |
-| `tier` | string | `fast` | Speed tier (`fast` or `radically_fast` for Qwen) |
+| `tier` | string | `radically_fast` (recommended) | Speed tier (`fast` or `radically_fast` for Qwen) |
 | `response_format` | string | `b64_json` | `b64_json` or `url` |
 | `seed` | int | random | For reproducibility |
 | `negative_prompt` | string | — | What to avoid |
@@ -186,8 +184,7 @@ curl -X POST https://api.nunchaku.dev/v1/images/edits \
     \"url\": \"data:image/jpeg;base64,$IMG_B64\",
     \"n\": 1,
     \"size\": \"1024x1024\",
-    \"tier\": \"fast\",
-    \"num_inference_steps\": 28,
+    \"tier\": \"radically_fast\",
     \"response_format\": \"b64_json\"
   }" | jq -r '.data[0].b64_json' | base64 -d > edited.jpg
 ```
@@ -208,8 +205,7 @@ response = requests.post(
         "url": f"data:image/jpeg;base64,{img_b64}",
         "n": 1,
         "size": "1024x1024",
-        "tier": "fast",
-        "num_inference_steps": 28,
+        "tier": "radically_fast",
         "response_format": "b64_json",
     },
 )
@@ -236,8 +232,7 @@ response = client.images.edit(
     response_format="b64_json",
     extra_body={
         "url": f"data:image/jpeg;base64,{img_b64}",
-        "tier": "fast",
-        "num_inference_steps": 28,
+        "tier": "radically_fast",
     },
 )
 edited = base64.b64decode(response.data[0].b64_json)
@@ -474,8 +469,7 @@ python demo/app.py
 
 - **Start with `nunchaku-qwen-image`** — supports all speed tiers, great for iteration
 - **Try `nunchaku-flux.2-klein-9b`** — distilled model, fast results
-- **Use `tier: "radically_fast"`** during development — ~10x faster, 60% cheaper (Qwen only)
-- **Switch to `tier: "fast"`** for your final demo
+- **Default to `tier: "radically_fast"`** (Qwen only) — ~10× faster, 60% cheaper, and best availability right now. Only reach for `tier: "fast"` if you find the extra steps are truly needed.
 - **Set a `seed`** while iterating on prompts — reproducible results
 - **Chain endpoints** — generate an image, edit it, then animate it
 - **Video takes ~30s** — plan your demo flow around this
