@@ -28,8 +28,7 @@ curl -s https://api.nunchaku.dev/v1/images/edits \
     \"url\": \"data:$MIME;base64,$IMG_B64\",
     \"n\": 1,
     \"size\": \"1024x1024\",
-    \"tier\": \"fast\",
-    \"num_inference_steps\": 28,
+    \"tier\": \"radically_fast\",
     \"response_format\": \"b64_json\"
   }" \
   | python3 -c "import sys, json, base64; d=json.load(sys.stdin); open('output_i2i.jpg','wb').write(base64.b64decode(d['data'][0]['b64_json'])); print('Saved output_i2i.jpg')"

@@ -15,8 +15,7 @@ curl -s https://api.nunchaku.dev/v1/images/generations \
     "prompt": "a red apple on a wooden table, photorealistic, studio lighting",
     "n": 1,
     "size": "1024x1024",
-    "tier": "fast",
-    "num_inference_steps": 28,
+    "tier": "radically_fast",
     "response_format": "b64_json",
     "seed": 42
   }' \
