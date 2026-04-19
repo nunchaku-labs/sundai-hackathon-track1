@@ -400,13 +400,12 @@ All endpoints return:
 
 Trade quality for speed with the `tier` parameter:
 
-| Tier | Speed | Cost | Use Case |
-|------|-------|------|----------|
-| `fast` | ~2x | 0.8x | Good balance (all models) |
-| `radically_fast` | ~10x | 0.4x | Rapid prototyping (Qwen only) |
+| Tier | Qwen latency | Cost | Recommendation |
+|------|--------------|------|----------------|
+| `radically_fast` | ~3s | 0.4× | **Default for Qwen.** Distilled 4-step variant. |
+| `fast` | ~60s (p95 ~120s) | 0.8× | Higher-quality mode — only when you've confirmed `radically_fast` isn't enough for a final render. Expect client-side timeouts if your HTTP timeout is below ~180s. |
 
-FLUX models support `fast` tier only. Qwen models support `fast` and `radically_fast`.
-Video Lightning models are already distilled (4 steps) — no tier parameter.
+FLUX models support `fast` tier only (already distilled, ~1s). Qwen models support both `fast` and `radically_fast`. Video Lightning models are already distilled (4 steps) — no tier parameter.
 
 ---
 

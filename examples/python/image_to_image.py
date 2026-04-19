@@ -47,8 +47,7 @@ response = requests.post(
         "url": f"data:{mime};base64,{img_b64}",
         "n": 1,
         "size": "1024x1024",
-        "num_inference_steps": 28,
-        "tier": "fast",
+        "tier": "radically_fast",
         "response_format": "b64_json",
     },
 )

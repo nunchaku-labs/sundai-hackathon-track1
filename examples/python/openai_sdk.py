@@ -29,7 +29,7 @@ response = client.images.generate(
     n=1,
     size="1024x1024",
     response_format="b64_json",
-    extra_body={"tier": "fast", "num_inference_steps": 28, "seed": 42},
+    extra_body={"tier": "radically_fast", "seed": 42},
 )
 
 img_bytes = base64.b64decode(response.data[0].b64_json)
