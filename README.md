@@ -2,10 +2,17 @@
 
 Build apps with state-of-the-art image and video generation.
 
+## Get Your API Key
+
+1. Sign up at **https://sundai.nunchaku.dev/** (Google login). You get **$10 in credits** automatically.
+2. Go to **Dashboard → API Keys → Create API Key**.
+3. Copy the key immediately — you won't be able to see it again. It looks like `sk-nunchaku-...`.
+4. Run out of credits? Come find the organizers.
+
 ## Quick Start
 
 ```bash
-# 1. Set your API key
+# 1. Set your API key (from the dashboard above)
 export NUNCHAKU_API_KEY="sk-nunchaku-..."
 
 # 2. Install dependencies
@@ -46,14 +53,37 @@ python demo/app.py
 
 ---
 
+## Pricing
+
+Pay per successful request. `1 credit = $1 USD`. Your $10 signup bonus already covers a lot of hackathon iteration — here's the budget math.
+
+| Model | Tier | Price / request | $10 gets you |
+|-------|------|----------------:|-------------:|
+| `nunchaku-qwen-image` | `radically_fast` | $0.002 | ~5,000 images |
+| `nunchaku-qwen-image` | `fast` | $0.004 | ~2,500 images |
+| `nunchaku-qwen-image-edit` | `radically_fast` | $0.0024 | ~4,166 edits |
+| `nunchaku-qwen-image-edit` | `fast` | $0.0048 | ~2,083 edits |
+| `nunchaku-flux.2-klein-9b` | `fast` | $0.0032 | ~3,125 images |
+| `nunchaku-flux.2-klein-9b-edit` | `fast` | $0.004 | ~2,500 edits |
+| `nunchaku-wan2.2-lightning-t2v` | `normal` | $0.020 | ~500 videos |
+| `nunchaku-wan2.2-lightning-i2v` | `normal` | $0.025 | ~400 videos |
+
+> **Tip:** iterate on prompts with `radically_fast` (Qwen only, ~10× faster, ~60% cheaper) then switch to `fast` for your final demo images. Full tier comparison is under **Speed Tiers** below.
+
+---
+
 ## API Reference
 
 **Base URL:** `https://api.nunchaku.dev`
 
-**Auth:** Pass your API key in the header:
+**Auth:** pass your API key in *either* header — both work:
 ```
 Authorization: Bearer sk-nunchaku-...
+# — or —
+X-API-Key: sk-nunchaku-...
 ```
+
+Each endpoint below shows three equivalent examples: **cURL**, **Python (`requests`)**, and **Python (OpenAI SDK)**. Video endpoints skip the OpenAI SDK — it doesn't support video generation.
 
 ### 1. Text-to-Image
 
@@ -61,6 +91,24 @@ Authorization: Bearer sk-nunchaku-...
 POST /v1/images/generations
 ```
 
+**cURL:**
+```bash
+curl -X POST https://api.nunchaku.dev/v1/images/generations \
+  -H "Authorization: Bearer $NUNCHAKU_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nunchaku-qwen-image",
+    "prompt": "a red apple on a wooden table, photorealistic",
+    "n": 1,
+    "size": "1024x1024",
+    "tier": "fast",
+    "num_inference_steps": 28,
+    "response_format": "b64_json",
+    "seed": 42
+  }' | jq -r '.data[0].b64_json' | base64 -d > output.jpg
+```
+
+**Python (`requests`):**
 ```python
 import requests, base64
 
@@ -81,22 +129,25 @@ response = requests.post(
 img = base64.b64decode(response.json()["data"][0]["b64_json"])
 ```
 
-Also works with FLUX:
+**Python (OpenAI SDK):**
 ```python
-# FLUX.2 Klein 9B — distilled, 4-step, fast tier only
-response = requests.post(
-    "https://api.nunchaku.dev/v1/images/generations",
-    headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
-    json={
-        "model": "nunchaku-flux.2-klein-9b",
-        "prompt": "a red apple on a wooden table, photorealistic",
-        "n": 1,
-        "size": "1024x1024",
-        "tier": "fast",
-        "response_format": "b64_json",
-    },
+import base64
+from openai import OpenAI
+
+client = OpenAI(base_url="https://api.nunchaku.dev/v1", api_key=API_KEY)
+
+response = client.images.generate(
+    model="nunchaku-qwen-image",
+    prompt="a red apple on a wooden table, photorealistic",
+    n=1,
+    size="1024x1024",
+    response_format="b64_json",
+    extra_body={"tier": "fast", "num_inference_steps": 28, "seed": 42},
 )
+img = base64.b64decode(response.data[0].b64_json)
 ```
+
+> Swap `model` to `nunchaku-flux.2-klein-9b` for FLUX (distilled, `tier: "fast"` only — no `num_inference_steps` needed).
 
 **Parameters:**
 
@@ -121,10 +172,29 @@ response = requests.post(
 POST /v1/images/edits
 ```
 
-The input image goes in the `url` field as a data URI:
+> **Key:** the input image goes in the `url` field as a `data:` URI — *not* an `image` field.
 
+**cURL:**
+```bash
+IMG_B64=$(base64 -w0 input.jpg)
+curl -X POST https://api.nunchaku.dev/v1/images/edits \
+  -H "Authorization: Bearer $NUNCHAKU_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"nunchaku-qwen-image-edit\",
+    \"prompt\": \"add a sunset in the background\",
+    \"url\": \"data:image/jpeg;base64,$IMG_B64\",
+    \"n\": 1,
+    \"size\": \"1024x1024\",
+    \"tier\": \"fast\",
+    \"num_inference_steps\": 28,
+    \"response_format\": \"b64_json\"
+  }" | jq -r '.data[0].b64_json' | base64 -d > edited.jpg
+```
+
+**Python (`requests`):**
 ```python
-import base64
+import base64, requests
 
 with open("input.jpg", "rb") as f:
     img_b64 = base64.b64encode(f.read()).decode()
@@ -145,12 +215,35 @@ response = requests.post(
 )
 ```
 
-FLUX edit model also available:
+**Python (OpenAI SDK):**
 ```python
-# Use "nunchaku-flux.2-klein-9b-edit" with tier "fast"
+import base64
+from openai import OpenAI
+
+client = OpenAI(base_url="https://api.nunchaku.dev/v1", api_key=API_KEY)
+
+with open("input.jpg", "rb") as f:
+    img_b64 = base64.b64encode(f.read()).decode()
+
+# The SDK's images.edit() requires an `image` kwarg, but Nunchaku ignores it
+# and reads the input image from `url` in extra_body.
+response = client.images.edit(
+    model="nunchaku-qwen-image-edit",
+    image=b"",  # ignored by Nunchaku — placeholder to satisfy the SDK
+    prompt="add a sunset in the background",
+    n=1,
+    size="1024x1024",
+    response_format="b64_json",
+    extra_body={
+        "url": f"data:image/jpeg;base64,{img_b64}",
+        "tier": "fast",
+        "num_inference_steps": 28,
+    },
+)
+edited = base64.b64decode(response.data[0].b64_json)
 ```
 
-> **Note:** Use the `url` field with a `data:` URI — not an `image` field.
+> Swap `model` to `nunchaku-flux.2-klein-9b-edit` (`tier: "fast"`) for the FLUX edit model.
 
 ---
 
@@ -160,6 +253,25 @@ FLUX edit model also available:
 POST /v1/video/generations
 ```
 
+**cURL:**
+```bash
+curl -X POST https://api.nunchaku.dev/v1/video/generations \
+  -H "Authorization: Bearer $NUNCHAKU_API_KEY" \
+  -H "Content-Type: application/json" \
+  --max-time 120 \
+  -d '{
+    "model": "nunchaku-wan2.2-lightning-t2v",
+    "prompt": "A golden retriever running on a beach at sunset, cinematic",
+    "n": 1,
+    "size": "1280x720",
+    "num_frames": 81,
+    "num_inference_steps": 4,
+    "guidance_scale": 1.0,
+    "response_format": "b64_json"
+  }' | jq -r '.data[0].b64_json' | base64 -d > output.mp4
+```
+
+**Python (`requests`):**
 ```python
 response = requests.post(
     "https://api.nunchaku.dev/v1/video/generations",
@@ -181,6 +293,8 @@ with open("output.mp4", "wb") as f:
     f.write(video)
 ```
 
+> The OpenAI SDK has no video-generation method — use cURL or `requests`.
+
 **Video parameters:**
 
 | Parameter | Default | Description |
@@ -198,8 +312,36 @@ with open("output.mp4", "wb") as f:
 POST /v1/video/animations
 ```
 
-This endpoint uses a **multimodal `messages` format** for the input image — different from the other endpoints:
+> **Key:** unlike the other endpoints, the image goes inside `messages[0].content` as an `image_url` block — not a top-level `image` or `url` field.
 
+**cURL:**
+```bash
+IMG_B64=$(base64 -w0 input.jpg)
+PROMPT="the scene comes to life with gentle motion"
+curl -X POST https://api.nunchaku.dev/v1/video/animations \
+  -H "Authorization: Bearer $NUNCHAKU_API_KEY" \
+  -H "Content-Type: application/json" \
+  --max-time 120 \
+  -d "{
+    \"model\": \"nunchaku-wan2.2-lightning-i2v\",
+    \"prompt\": \"$PROMPT\",
+    \"n\": 1,
+    \"size\": \"1280x720\",
+    \"num_frames\": 81,
+    \"num_inference_steps\": 4,
+    \"guidance_scale\": 1.0,
+    \"response_format\": \"b64_json\",
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,$IMG_B64\"}},
+        {\"type\": \"text\", \"text\": \"$PROMPT\"}
+      ]
+    }]
+  }" | jq -r '.data[0].b64_json' | base64 -d > output.mp4
+```
+
+**Python (`requests`):**
 ```python
 with open("input.jpg", "rb") as f:
     img_b64 = base64.b64encode(f.read()).decode()
@@ -233,7 +375,7 @@ response = requests.post(
 )
 ```
 
-> **Key:** The image goes inside `messages[0].content` as an `image_url` block, not a top-level `image` field.
+> The OpenAI SDK has no video-generation method — use cURL or `requests`.
 
 ---
 
@@ -273,34 +415,12 @@ Video Lightning models are already distilled (4 steps) — no tier parameter.
 
 ---
 
-### OpenAI SDK Compatibility
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="https://api.nunchaku.dev/v1",
-    api_key="sk-nunchaku-...",
-)
-
-response = client.images.generate(
-    model="nunchaku-qwen-image",
-    prompt="a red apple on a wooden table",
-    n=1,
-    size="1024x1024",
-    response_format="b64_json",
-    extra_body={"tier": "fast", "num_inference_steps": 28},
-)
-```
-
----
-
 ### Errors
 
 | Code | Meaning | What to do |
 |------|---------|------------|
 | 401 | Invalid or missing API key | Check your `NUNCHAKU_API_KEY` |
-| 402 | Insufficient credits | Contact organizers |
+| 402 | Insufficient credits | Check balance on the dashboard; ask organizers if you need a top-up |
 | 429 | Rate limited (RPM or concurrent) | Wait and retry (check `Retry-After` header) |
 | 504 | Generation timeout | Retry, or use a simpler prompt |
 
@@ -338,9 +458,6 @@ Four flavors per endpoint — pick the one closest to your hackathon stack.
 | [`examples/curl/image_to_image.sh`](examples/curl/image_to_image.sh) | `/v1/images/edits` |
 | [`examples/curl/text_to_video.sh`](examples/curl/text_to_video.sh) | `/v1/video/generations` |
 | [`examples/curl/image_to_video.sh`](examples/curl/image_to_video.sh) | `/v1/video/animations` |
-| [`examples/python/openai_sdk.py`](examples/python/openai_sdk.py) | OpenAI SDK usage |
-| [`examples/javascript/text_to_image.mjs`](examples/javascript/text_to_image.mjs) | Text-to-image in JS |
-| [`examples/javascript/image_to_video.mjs`](examples/javascript/image_to_video.mjs) | Image-to-video in JS |
 
 ## Demo App
 
